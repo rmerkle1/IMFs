@@ -144,24 +144,6 @@ function MoleculeBuilderSection({ title, polarity, massIndex, shape, onPolarityC
       <MassSlider value={massIndex} onChange={onMassChange} polarityKey={polarity} />
       <ShapeToggle value={shape} onChange={onShapeChange} polarity={polarity} />
 
-      {mol && (
-        <div className="builder-mol-info" style={{ borderColor: color + '33' }}>
-          <div className="builder-mol-info-row">
-            <span className="builder-info-label">BP:</span>
-            <span className="builder-info-val" style={{ color }}>
-              {mol.bp !== null ? `${mol.bp} °C` : '—'}
-            </span>
-            <span className="builder-info-label">MP:</span>
-            <span className="builder-info-val" style={{ color }}>
-              {mol.mp !== null ? `${mol.mp} °C` : '—'}
-            </span>
-          </div>
-          <div className="builder-mol-info-row">
-            <span className="builder-info-label">Mass:</span>
-            <span className="builder-info-val">{mol.mass} g/mol</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -174,11 +156,6 @@ export default function BuilderMode({
 }) {
   return (
     <div className="builder-mode">
-      <div className="builder-description">
-        <span className="builder-desc-text">
-          Adjust polarity and mass to explore how molecular properties affect intermolecular forces.
-        </span>
-      </div>
       <MoleculeBuilderSection
         title="Molecule 1"
         polarity={mol1Polarity}

@@ -218,6 +218,7 @@ function GridBackground({ width, height }) {
 export default function MoleculeCanvas({ mol1, mol2, temperature, onDataUpdate }) {
   const containerRef = useRef(null);
   const [dims, setDims] = useState({ width: 700, height: CANVAS_HEIGHT });
+  const [showPolarity, setShowPolarity] = useState(false);
 
   useEffect(() => {
     function updateDims() {
@@ -282,6 +283,7 @@ export default function MoleculeCanvas({ mol1, mol2, temperature, onDataUpdate }
           angle={pos1.angle}
           id="mol1"
           highlight={strength > 0.6}
+          showPolarity={showPolarity}
         />
         <MoleculeRenderer
           molecule={mol2}
@@ -290,6 +292,7 @@ export default function MoleculeCanvas({ mol1, mol2, temperature, onDataUpdate }
           angle={pos2.angle}
           id="mol2"
           highlight={strength > 0.6}
+          showPolarity={showPolarity}
         />
 
         {/* IMF type legend top-left */}
@@ -316,6 +319,21 @@ export default function MoleculeCanvas({ mol1, mol2, temperature, onDataUpdate }
               </g>
             );
           })}
+        </g>
+
+        {/* Electron density toggle button */}
+        <g transform={`translate(${dims.width - 180}, 14)`}
+           style={{ cursor: 'pointer' }}
+           onClick={() => setShowPolarity(p => !p)}>
+          <rect x={0} y={0} width={82} height={24} rx={5}
+            fill={showPolarity ? '#2A1A4A' : '#1E2940'}
+            stroke={showPolarity ? '#8844BB' : '#3A4F70'} strokeWidth={1} />
+          <circle cx={12} cy={12} r={5} fill={showPolarity ? '#8844BB' : '#445566'} />
+          <text x={47} y={12} textAnchor="middle" dominantBaseline="middle"
+            fontSize={10} fill={showPolarity ? '#CC88FF' : '#8BAFD4'} fontWeight="600"
+            style={{ userSelect: 'none' }}>
+            e⁻ Density
+          </text>
         </g>
 
         {/* Reset button */}
