@@ -1,46 +1,46 @@
 import React from 'react';
 import { LEWIS_STRUCTURES } from '../data/lewisStructures';
 
-const ATOM_STYLES = {
-  C:  { color: '#888888', radius: 10, textColor: '#E0E0E0' },
-  H:  { color: '#CCCCCC', radius: 5,  textColor: '#666666' },
-  O:  { color: '#DD3311', radius: 10, textColor: 'white'   },
-  S:  { color: '#CCAA00', radius: 11, textColor: 'white'   },
-  N:  { color: '#3355CC', radius: 10, textColor: 'white'   },
-  F:  { color: '#22BB44', radius: 9,  textColor: 'white'   },
-  Cl: { color: '#339944', radius: 12, textColor: 'white'   },
-  I:  { color: '#8844BB', radius: 13, textColor: 'white'   },
-  Na: { color: '#9933CC', radius: 12, textColor: 'white'   },
-};
-
+// Electronegativity (Pauling scale) — used for density cloud coloring
 const ELECTRONEGATIVITY = {
-  F: 3.98, O: 3.44, Cl: 3.16, N: 3.04, S: 2.58,
-  C: 2.55, H: 2.20, I: 2.66, Na: 0.93,
+  F: 3.98, O: 3.44, Cl: 3.16, N: 3.04,
+  S: 2.58, C: 2.55, I: 2.66, H: 2.20, Na: 0.93,
 };
 
+// Atom circle styles for heteroatoms (C is always implicit in skeletal)
+const ATOM_STYLES = {
+  O:  { fill: '#CC2200', text: '#FFFFFF', radius: 11 },
+  S:  { fill: '#AA8800', text: '#FFFFFF', radius: 12 },
+  N:  { fill: '#2244CC', text: '#FFFFFF', radius: 11 },
+  F:  { fill: '#117733', text: '#FFFFFF', radius: 10 },
+  Cl: { fill: '#1A8844', text: '#FFFFFF', radius: 13 },
+  I:  { fill: '#662299', text: '#FFFFFF', radius: 14 },
+  Na: { fill: '#7722AA', text: '#FFFFFF', radius: 13 },
+};
+
+// Map electronegativity to a cloud color (red=electron-rich, blue=electron-poor)
 function enToColor(en) {
-  if (en >= 3.5) return '#FF1100';
-  if (en >= 3.0) return '#FF6600';
-  if (en >= 2.8) return '#FFAA00';
-  if (en >= 2.5) return '#AACC00';
-  if (en >= 2.0) return '#0099FF';
-  return '#6600FF';
+  if (en >= 3.5) return '#EE1100';
+  if (en >= 3.0) return '#FF5500';
+  if (en >= 2.8) return '#FF9900';
+  if (en >= 2.5) return '#88BB00';
+  if (en >= 2.0) return '#0088FF';
+  return '#6600EE';
 }
 
-function getAtomRadius(atom) {
-  if (atom.radius != null) return atom.radius;
-  return (ATOM_STYLES[atom.symbol] || ATOM_STYLES['C']).radius;
+function atomRadius(symbol) {
+  return (ATOM_STYLES[symbol] || { radius: 10 }).radius;
 }
 
-function getAtomColor(atom) {
-  return (ATOM_STYLES[atom.symbol] || ATOM_STYLES['C']).color;
+// ── Bond rendering ────────────────────────────────────────────────────────────
+// Bonds are shortened so they don't overlap with heteroatom circles.
+// C atoms are implicit (radius 0), H atoms use a small clearance.
+function bondClearance(symbol) {
+  if (symbol === 'C') return 0;
+  if (symbol === 'H') return 5;
+  return atomRadius(symbol) + 3;
 }
 
-function getAtomTextColor(atom) {
-  return (ATOM_STYLES[atom.symbol] || ATOM_STYLES['C']).textColor;
-}
-
-// Render bonds between atoms
 function BondLines({ atoms, bonds }) {
   return (
     <>
@@ -52,139 +52,111 @@ function BondLines({ atoms, bonds }) {
         const dx = b.x - a.x;
         const dy = b.y - a.y;
         const len = Math.sqrt(dx * dx + dy * dy) || 1;
-        // Perpendicular unit vector
-        const px = -dy / len;
-        const py = dx / len;
+        const ux = dx / len;
+        const uy = dy / len;
+        // Perpendicular
+        const px = -uy;
+        const py = ux;
 
-        const strokeProps = {
-          stroke: '#AAAAAA',
-          strokeWidth: 1.5,
+        // Shorten bond to not overlap atom circles
+        const ca = bondClearance(a.symbol);
+        const cb = bondClearance(b.symbol);
+        const x1 = a.x + ux * ca;
+        const y1 = a.y + uy * ca;
+        const x2 = b.x - ux * cb;
+        const y2 = b.y - uy * cb;
+
+        const base = {
+          stroke: bond.ionic ? '#887744' : '#2A3A50',
+          strokeWidth: 1.8,
           strokeLinecap: 'round',
+          strokeDasharray: bond.ionic ? '5,3' : undefined,
         };
-        if (bond.ionic) {
-          Object.assign(strokeProps, { strokeDasharray: '4,3', stroke: '#DDDDAA' });
-        }
 
-        if (bond.order === 1 || bond.order == null) {
+        if (bond.order === 3) {
+          const off = 4;
           return (
-            <line key={i}
-              x1={a.x} y1={a.y} x2={b.x} y2={b.y}
-              {...strokeProps}
-            />
+            <g key={i}>
+              <line x1={x1} y1={y1} x2={x2} y2={y2} {...base} />
+              <line x1={x1 + px*off} y1={y1 + py*off} x2={x2 + px*off} y2={y2 + py*off} {...base} />
+              <line x1={x1 - px*off} y1={y1 - py*off} x2={x2 - px*off} y2={y2 - py*off} {...base} />
+            </g>
           );
-        } else if (bond.order === 2) {
+        }
+        if (bond.order === 2) {
           const off = 3;
           return (
             <g key={i}>
-              <line
-                x1={a.x + px * off} y1={a.y + py * off}
-                x2={b.x + px * off} y2={b.y + py * off}
-                {...strokeProps}
-              />
-              <line
-                x1={a.x - px * off} y1={a.y - py * off}
-                x2={b.x - px * off} y2={b.y - py * off}
-                {...strokeProps}
-              />
-            </g>
-          );
-        } else if (bond.order === 3) {
-          const off = 5;
-          return (
-            <g key={i}>
-              <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} {...strokeProps} />
-              <line
-                x1={a.x + px * off} y1={a.y + py * off}
-                x2={b.x + px * off} y2={b.y + py * off}
-                {...strokeProps}
-              />
-              <line
-                x1={a.x - px * off} y1={a.y - py * off}
-                x2={b.x - px * off} y2={b.y - py * off}
-                {...strokeProps}
-              />
+              <line x1={x1 + px*off} y1={y1 + py*off} x2={x2 + px*off} y2={y2 + py*off} {...base} />
+              <line x1={x1 - px*off} y1={y1 - py*off} x2={x2 - px*off} y2={y2 - py*off} {...base} />
             </g>
           );
         }
-        return null;
+        return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} {...base} />;
       })}
     </>
   );
 }
 
-// Render lone pair dots around atoms
-function LonePairDots({ atoms, lonePairs }) {
-  if (!lonePairs || lonePairs.length === 0) return null;
-  const dots = [];
-  lonePairs.forEach((lp, lpIdx) => {
-    const atom = atoms[lp.atomId];
-    if (!atom) return;
-    const r = getAtomRadius(atom) + 8;
-    const color = getAtomColor(atom);
-    lp.angles.forEach((angleDeg, aIdx) => {
-      const rad = (angleDeg * Math.PI) / 180;
-      const dx = Math.cos(rad) * r;
-      const dy = -Math.sin(rad) * r; // SVG y-axis is flipped
-      dots.push(
-        <circle
-          key={`lp-${lpIdx}-${aIdx}`}
-          cx={atom.x + dx}
-          cy={atom.y + dy}
-          r={2.5}
-          fill={color}
-          opacity={0.85}
-        />
-      );
-    });
-  });
-  return <>{dots}</>;
-}
-
-// Render atom circles with labels
-function AtomCircles({ atoms }) {
+// ── Atom rendering ────────────────────────────────────────────────────────────
+// C = invisible vertex (nothing rendered)
+// H = small text label only, no circle
+// Heteroatoms = colored circle + symbol text + optional charge badge
+function AtomNodes({ atoms }) {
   return (
     <>
       {atoms.map(atom => {
-        const r = getAtomRadius(atom);
-        const color = getAtomColor(atom);
-        const textColor = getAtomTextColor(atom);
-        const isSmallH = atom.symbol === 'H' && r <= 4;
+        // C atoms are invisible skeletal vertices
+        if (atom.symbol === 'C') return null;
+
+        // H atoms: small dark text, no circle
+        if (atom.symbol === 'H') {
+          return (
+            <text
+              key={atom.id}
+              x={atom.x}
+              y={atom.y}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fontSize={11}
+              fontWeight="600"
+              fill="#2A3A50"
+              style={{ userSelect: 'none', fontFamily: 'sans-serif' }}
+            >
+              H
+            </text>
+          );
+        }
+
+        // Heteroatoms: colored circle with symbol
+        const style = ATOM_STYLES[atom.symbol] || { fill: '#555', text: '#fff', radius: 11 };
+        const r = style.radius;
+        const fontSize = atom.symbol.length > 1 ? 8 : 10;
 
         return (
           <g key={atom.id}>
-            <circle
-              cx={atom.x}
-              cy={atom.y}
-              r={r}
-              fill={color}
-              stroke={color}
-              strokeWidth={0.5}
-              opacity={0.92}
-            />
-            {!isSmallH && (
-              <text
-                x={atom.x}
-                y={atom.y}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fontSize={r >= 10 ? (atom.symbol.length > 1 ? 7.5 : 9) : 7}
-                fontWeight="700"
-                fill={textColor}
-                style={{ userSelect: 'none', fontFamily: 'sans-serif' }}
-              >
-                {atom.symbol}
-              </text>
-            )}
-            {/* Formal charge badge */}
+            <circle cx={atom.x} cy={atom.y} r={r} fill={style.fill} />
+            <text
+              x={atom.x}
+              y={atom.y}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fontSize={fontSize}
+              fontWeight="700"
+              fill={style.text}
+              style={{ userSelect: 'none', fontFamily: 'sans-serif' }}
+            >
+              {atom.symbol}
+            </text>
             {atom.charge != null && (
               <text
-                x={atom.x + r * 0.65}
-                y={atom.y - r * 0.65}
+                x={atom.x + r * 0.7}
+                y={atom.y - r * 0.7}
                 textAnchor="middle"
                 dominantBaseline="middle"
                 fontSize={7}
                 fontWeight="800"
-                fill={atom.charge < 0 ? '#FF8888' : '#88CCFF'}
+                fill={atom.charge < 0 ? '#FF6666' : '#66AAFF'}
                 style={{ userSelect: 'none' }}
               >
                 {atom.charge > 0 ? '+' : '−'}
@@ -197,14 +169,47 @@ function AtomCircles({ atoms }) {
   );
 }
 
-// Electron density cloud overlay
+// ── Lone pair dots ────────────────────────────────────────────────────────────
+function LonePairDots({ atoms, lonePairs }) {
+  if (!lonePairs || lonePairs.length === 0) return null;
+  const dots = [];
+  lonePairs.forEach((lp, lpIdx) => {
+    const atom = atoms[lp.atomId];
+    if (!atom || atom.symbol === 'C') return;
+    const clearance = atom.symbol === 'H' ? 8 : atomRadius(atom.symbol) + 7;
+    lp.angles.forEach((deg, aIdx) => {
+      const rad = (deg * Math.PI) / 180;
+      const dx = Math.cos(rad) * clearance;
+      const dy = -Math.sin(rad) * clearance; // SVG y-axis flip
+      const style = ATOM_STYLES[atom.symbol];
+      const dotColor = style ? style.fill : '#444';
+      dots.push(
+        <circle
+          key={`lp-${lpIdx}-${aIdx}`}
+          cx={atom.x + dx}
+          cy={atom.y + dy}
+          r={2.2}
+          fill={dotColor}
+          opacity={0.85}
+        />
+      );
+    });
+  });
+  return <>{dots}</>;
+}
+
+// ── Continuous electron density cloud ────────────────────────────────────────
+// All per-atom blobs are inside ONE <g> that has a single blur filter applied.
+// This merges them into one continuous cloud rather than separate per-atom blobs.
 function ElectronDensityCloud({ atoms, filterId }) {
   return (
-    <>
+    <g filter={`url(#${filterId})`} opacity={0.6}>
       {atoms.map(atom => {
-        const en = ELECTRONEGATIVITY[atom.symbol] || 2.5;
+        const en = ELECTRONEGATIVITY[atom.symbol] || 2.55;
         const color = enToColor(en);
-        const r = getAtomRadius(atom) * 2.8;
+        // Larger blob radius for electronegative atoms to emphasize their density
+        const r = atom.symbol === 'H' ? 14 :
+                  atom.symbol === 'C' ? 16 : 22;
         return (
           <circle
             key={`cloud-${atom.id}`}
@@ -212,61 +217,39 @@ function ElectronDensityCloud({ atoms, filterId }) {
             cy={atom.y}
             r={r}
             fill={color}
-            opacity={0.45}
-            filter={`url(#${filterId})`}
           />
         );
       })}
-    </>
+    </g>
   );
 }
 
-// Fallback renderer: the original blob ellipse style
+// ── Fallback blob renderer (for any molecule not in LEWIS_STRUCTURES) ─────────
 function FallbackRenderer({ molecule, x, y, angle }) {
   const POLARITY_COLORS = {
-    nonpolar: '#4A90D9',
-    weaklyPolar: '#4CAF7D',
-    polar: '#FF9800',
-    highlyPolar: '#E91E8C',
-    ion: '#FFD700',
+    nonpolar: '#4A90D9', weaklyPolar: '#4CAF7D',
+    polar: '#FF9800', highlyPolar: '#E91E8C', ion: '#FFD700',
   };
-  const mol = molecule;
-  const polarity = mol.polarity || 'nonpolar';
-  const color = POLARITY_COLORS[polarity] || '#4A90D9';
-  const mass = mol.mass || 30;
-  const baseRadius = Math.round(22 + Math.sqrt(mass) * 1.8);
-  const shape = mol.shape || 'linear';
-  const aspect = (shape === 'tetrahedral' || shape === 'trigonal' || polarity === 'ion')
-    ? 1
-    : shape === 'bent'
-      ? 1.15
-      : 1.2 + Math.min(0.6, mass / 120);
-  const rx = baseRadius * aspect;
-  const ry = baseRadius;
-  const isIon = polarity === 'ion';
-
+  const color = POLARITY_COLORS[molecule.polarity] || '#4A90D9';
+  const mass = molecule.mass || 30;
+  const baseR = Math.round(22 + Math.sqrt(mass) * 1.6);
+  const rotDeg = (angle * 180) / Math.PI;
   return (
-    <g transform={`translate(${x}, ${y}) rotate(${(angle * 180) / Math.PI})`}>
-      <ellipse cx={0} cy={0} rx={rx} ry={ry} fill={color} opacity={0.7}
-        stroke={color} strokeWidth={1.5} />
-      {isIon && mol.charge !== undefined && (
-        <text x={0} y={0} textAnchor="middle" dominantBaseline="middle"
-          fontSize={Math.max(14, baseRadius * 0.55)} fontWeight="900"
-          fill="white" style={{ userSelect: 'none' }}>
-          {mol.charge > 0 ? '+' : '−'}
-        </text>
-      )}
-      <g transform={`rotate(${-(angle * 180) / Math.PI})`}>
-        <text x={0} y={ry + 14} textAnchor="middle" dominantBaseline="middle"
-          fontSize={Math.max(10, Math.min(13, baseRadius * 0.42))} fontWeight="600"
-          fill={color} opacity={0.95} style={{ userSelect: 'none' }}>
-          {mol.formula}
+    <g transform={`translate(${x}, ${y}) rotate(${rotDeg})`}>
+      <ellipse cx={0} cy={0} rx={baseR * 1.3} ry={baseR}
+        fill={color} fillOpacity={0.25} stroke={color} strokeWidth={1.5} />
+      <g transform={`rotate(${-rotDeg})`}>
+        <text x={0} y={baseR + 14} textAnchor="middle" dominantBaseline="middle"
+          fontSize={11} fontWeight="600" fill={color}
+          style={{ userSelect: 'none' }}>
+          {molecule.formula}
         </text>
       </g>
     </g>
   );
 }
 
+// ── Main renderer ─────────────────────────────────────────────────────────────
 export default function MoleculeRenderer({ molecule, x, y, angle, showPolarity, id }) {
   if (!molecule) return null;
 
@@ -277,60 +260,56 @@ export default function MoleculeRenderer({ molecule, x, y, angle, showPolarity, 
 
   const { atoms, bonds, lonePairs } = struct;
   const rotDeg = (angle * 180) / Math.PI;
-
-  // Build a unique filter ID per molecule instance
   const safeId = (id || molecule.formula).replace(/[^a-zA-Z0-9]/g, '_');
-  const blurFilterId = `blur-${safeId}`;
+  const cloudFilterId = `ecloud-${safeId}`;
 
-  // Color for the formula label (based on polarity)
-  const POLARITY_COLORS = {
-    nonpolar: '#4A90D9',
-    weaklyPolar: '#4CAF7D',
-    polar: '#FF9800',
-    highlyPolar: '#E91E8C',
-    ion: '#FFD700',
+  // Label color by polarity
+  const LABEL_COLORS = {
+    nonpolar: '#2A6099', weaklyPolar: '#2A7A4A',
+    polar: '#AA5500', highlyPolar: '#AA0055', ion: '#886600',
   };
-  const labelColor = POLARITY_COLORS[molecule.polarity] || '#8BAFD4';
+  const labelColor = LABEL_COLORS[molecule.polarity] || '#2A3A50';
 
-  // Compute bounding box for the label offset
-  const ys = atoms.map(a => a.y + getAtomRadius(a));
-  const maxY = Math.max(...ys);
+  // Compute bottom of structure for label placement
+  const maxY = atoms.length > 0 ? Math.max(...atoms.map(a => a.y + (a.symbol === 'C' ? 0 : atomRadius(a.symbol)))) : 0;
+  const labelY = maxY + 16;
 
   return (
     <g transform={`translate(${x}, ${y}) rotate(${rotDeg})`}>
       <defs>
         {showPolarity && (
-          <filter id={blurFilterId} x="-80%" y="-80%" width="260%" height="260%">
-            <feGaussianBlur stdDeviation="4" />
+          <filter id={cloudFilterId}
+            x="-120%" y="-120%" width="340%" height="340%"
+            colorInterpolationFilters="sRGB">
+            <feGaussianBlur stdDeviation="15" />
           </filter>
         )}
       </defs>
 
-      {/* Electron density cloud — rendered first (behind everything) */}
-      {showPolarity && (
-        <ElectronDensityCloud atoms={atoms} filterId={blurFilterId} />
+      {/* Electron density cloud — rendered first, behind everything */}
+      {showPolarity && atoms.length > 0 && (
+        <ElectronDensityCloud atoms={atoms} filterId={cloudFilterId} />
       )}
 
-      {/* Bonds */}
+      {/* Bond lines */}
       <BondLines atoms={atoms} bonds={bonds} />
 
       {/* Lone pair dots */}
       <LonePairDots atoms={atoms} lonePairs={lonePairs} />
 
-      {/* Atoms */}
-      <AtomCircles atoms={atoms} />
+      {/* Atom nodes */}
+      <AtomNodes atoms={atoms} />
 
-      {/* Formula label — counter-rotated so it stays readable */}
+      {/* Formula label — counter-rotated so it's always horizontal */}
       <g transform={`rotate(${-rotDeg})`}>
         <text
           x={0}
-          y={maxY + 14}
+          y={labelY}
           textAnchor="middle"
           dominantBaseline="middle"
           fontSize={11}
-          fontWeight="600"
+          fontWeight="700"
           fill={labelColor}
-          opacity={0.9}
           style={{ userSelect: 'none', letterSpacing: '0.01em' }}
         >
           {molecule.formula}
