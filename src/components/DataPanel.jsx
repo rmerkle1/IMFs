@@ -2,11 +2,11 @@ import React from 'react';
 import { getMoleculeIMFs, getIMFs, getIMFStrength } from '../data/molecules';
 
 const POLARITY_COLORS = {
-  nonpolar: '#4A90D9',
-  weaklyPolar: '#4CAF7D',
-  polar: '#FF9800',
-  highlyPolar: '#E91E8C',
-  ion: '#FFD700',
+  nonpolar:    '#17b29e',
+  weaklyPolar: '#85c441',
+  polar:       '#fdb714',
+  highlyPolar: '#e9177a',
+  ion:         '#748ac5',
 };
 
 const POLARITY_LABELS = {
@@ -77,14 +77,14 @@ export default function DataPanel({ mol1, mol2, temperature }) {
   const strength = bothPresent ? getIMFStrength(mol1, mol2) : 0;
 
   const imfColors = {
-    'ion-ion': '#FFD700',
-    'ion-dipole': '#FFD700',
-    'ion-induced dipole': '#FFAA00',
-    'hydrogen bonding': '#E91E8C',
-    'dipole-dipole': '#FF9800',
-    'dipole-dipole (weak)': '#4CAF7D',
-    'dipole-induced dipole': '#FF9800',
-    'London dispersion': '#4A90D9',
+    'ion-ion':              '#748ac5',
+    'ion-dipole':           '#00addb',
+    'ion-induced dipole':   '#00addb',
+    'hydrogen bonding':     '#e9177a',
+    'dipole-dipole':        '#fdb714',
+    'dipole-dipole (weak)': '#85c441',
+    'dipole-induced dipole':'#85c441',
+    'London dispersion':    '#17b29e',
   };
 
   const primaryColor = imfs.length > 0 ? (imfColors[imfs[0]] || '#4A90D9') : '#4A90D9';

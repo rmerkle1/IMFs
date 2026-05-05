@@ -6,10 +6,10 @@ export default function ControlPanel({
   mode,
   onModeChange,
   // Builder props
-  mol1Polarity, mol1Mass, mol1Shape,
-  mol2Polarity, mol2Mass, mol2Shape,
-  onMol1PolarityChange, onMol1MassChange, onMol1ShapeChange,
-  onMol2PolarityChange, onMol2MassChange, onMol2ShapeChange,
+  mol1Polarity, mol1Mass,
+  mol2Polarity, mol2Mass,
+  onMol1PolarityChange, onMol1MassChange,
+  onMol2PolarityChange, onMol2MassChange,
   // Simulator props
   sim1Formula, sim2Formula,
   onSim1Change, onSim2Change,
@@ -26,6 +26,7 @@ export default function ControlPanel({
             Builder
           </button>
           <button
+            data-tutorial="simulator-tab"
             className={`mode-btn ${mode === 'simulator' ? 'mode-btn-active' : ''}`}
             onClick={() => onModeChange('simulator')}
           >
@@ -44,16 +45,12 @@ export default function ControlPanel({
           <BuilderMode
             mol1Polarity={mol1Polarity}
             mol1Mass={mol1Mass}
-            mol1Shape={mol1Shape}
             mol2Polarity={mol2Polarity}
             mol2Mass={mol2Mass}
-            mol2Shape={mol2Shape}
             onMol1PolarityChange={onMol1PolarityChange}
             onMol1MassChange={onMol1MassChange}
-            onMol1ShapeChange={onMol1ShapeChange}
             onMol2PolarityChange={onMol2PolarityChange}
             onMol2MassChange={onMol2MassChange}
-            onMol2ShapeChange={onMol2ShapeChange}
           />
         ) : (
           <SimulatorMode

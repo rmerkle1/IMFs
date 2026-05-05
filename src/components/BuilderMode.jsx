@@ -10,11 +10,11 @@ const POLARITY_LABELS = {
   ion: 'Ion',
 };
 const POLARITY_COLORS = {
-  nonpolar: '#4A90D9',
-  weaklyPolar: '#4CAF7D',
-  polar: '#FF9800',
-  highlyPolar: '#E91E8C',
-  ion: '#FFD700',
+  nonpolar:    '#17b29e',
+  weaklyPolar: '#85c441',
+  polar:       '#fdb714',
+  highlyPolar: '#e9177a',
+  ion:         '#748ac5',
 };
 
 function PolaritySlider({ value, onChange, molLabel }) {
@@ -99,32 +99,7 @@ function MassSlider({ value, onChange, polarityKey }) {
   );
 }
 
-function ShapeToggle({ value, onChange, polarity }) {
-  const color = POLARITY_COLORS[polarity] || '#4A90D9';
-  return (
-    <div className="builder-slider-group">
-      <span className="builder-slider-title">Shape</span>
-      <div className="shape-toggle-row">
-        {['linear', 'bundled'].map(shape => (
-          <button
-            key={shape}
-            className={`shape-toggle-btn ${value === shape ? 'shape-toggle-active' : ''}`}
-            style={value === shape ? { background: color + '30', borderColor: color, color } : {}}
-            onClick={() => onChange(shape)}
-          >
-            {shape === 'linear' ? (
-              <span className="shape-icon">⟶⟶ Linear</span>
-            ) : (
-              <span className="shape-icon">⬡ Bundled</span>
-            )}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function MoleculeBuilderSection({ title, polarity, massIndex, shape, onPolarityChange, onMassChange, onShapeChange }) {
+function MoleculeBuilderSection({ title, polarity, massIndex, onPolarityChange, onMassChange, tutorialPolarityAttr, tutorialMassAttr }) {
   const mol = getBuilderMolecule(polarity, massIndex);
   const color = POLARITY_COLORS[polarity] || '#4A90D9';
 
@@ -140,19 +115,21 @@ function MoleculeBuilderSection({ title, polarity, massIndex, shape, onPolarityC
         )}
       </div>
 
-      <PolaritySlider value={polarity} onChange={onPolarityChange} molLabel={title} />
-      <MassSlider value={massIndex} onChange={onMassChange} polarityKey={polarity} />
-      <ShapeToggle value={shape} onChange={onShapeChange} polarity={polarity} />
-
+      <div data-tutorial={tutorialPolarityAttr}>
+        <PolaritySlider value={polarity} onChange={onPolarityChange} molLabel={title} />
+      </div>
+      <div data-tutorial={tutorialMassAttr}>
+        <MassSlider value={massIndex} onChange={onMassChange} polarityKey={polarity} />
+      </div>
     </div>
   );
 }
 
 export default function BuilderMode({
-  mol1Polarity, mol1Mass, mol1Shape,
-  mol2Polarity, mol2Mass, mol2Shape,
-  onMol1PolarityChange, onMol1MassChange, onMol1ShapeChange,
-  onMol2PolarityChange, onMol2MassChange, onMol2ShapeChange,
+  mol1Polarity, mol1Mass,
+  mol2Polarity, mol2Mass,
+  onMol1PolarityChange, onMol1MassChange,
+  onMol2PolarityChange, onMol2MassChange,
 }) {
   return (
     <div className="builder-mode">
@@ -160,19 +137,17 @@ export default function BuilderMode({
         title="Molecule 1"
         polarity={mol1Polarity}
         massIndex={mol1Mass}
-        shape={mol1Shape}
         onPolarityChange={onMol1PolarityChange}
         onMassChange={onMol1MassChange}
-        onShapeChange={onMol1ShapeChange}
+        tutorialPolarityAttr="polarity-sliders"
+        tutorialMassAttr="mass-sliders"
       />
       <MoleculeBuilderSection
         title="Molecule 2"
         polarity={mol2Polarity}
         massIndex={mol2Mass}
-        shape={mol2Shape}
         onPolarityChange={onMol2PolarityChange}
         onMassChange={onMol2MassChange}
-        onShapeChange={onMol2ShapeChange}
       />
     </div>
   );

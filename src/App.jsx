@@ -1,7 +1,8 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import MoleculeCanvas from './components/MoleculeCanvas';
 import DataPanel from './components/DataPanel';
 import ControlPanel from './components/ControlPanel';
+import TutorialOverlay from './components/TutorialOverlay';
 import { getBuilderMolecule, SIMULATOR_MOLECULES } from './data/molecules';
 import './App.css';
 
@@ -17,11 +18,17 @@ export default function App() {
   // Builder state
   const [mol1Polarity, setMol1Polarity] = useState('nonpolar');
   const [mol1Mass, setMol1Mass] = useState(0);
-  const [mol1Shape, setMol1Shape] = useState('linear');
-
   const [mol2Polarity, setMol2Polarity] = useState('highlyPolar');
   const [mol2Mass, setMol2Mass] = useState(0);
-  const [mol2Shape, setMol2Shape] = useState('linear');
+
+  // Tutorial
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+  useEffect(() => {
+    if (!localStorage.getItem('imf-tutorial-seen')) {
+      setTutorialOpen(true);
+      localStorage.setItem('imf-tutorial-seen', '1');
+    }
+  }, []);
 
   // Simulator state
   const [sim1Formula, setSim1Formula] = useState('H₂O');
@@ -30,41 +37,60 @@ export default function App() {
   // Derive molecules
   const mol1 = useMemo(() => {
     if (mode === 'builder') {
-      const m = getBuilderMolecule(mol1Polarity, mol1Mass);
-      return m ? { ...m, shape: mol1Shape } : null;
+      return getBuilderMolecule(mol1Polarity, mol1Mass) || null;
     } else {
       return SIMULATOR_MOLECULES.find(m => m.formula === sim1Formula) || null;
     }
-  }, [mode, mol1Polarity, mol1Mass, mol1Shape, sim1Formula]);
+  }, [mode, mol1Polarity, mol1Mass, sim1Formula]);
 
   const mol2 = useMemo(() => {
     if (mode === 'builder') {
-      const m = getBuilderMolecule(mol2Polarity, mol2Mass);
-      return m ? { ...m, shape: mol2Shape } : null;
+      return getBuilderMolecule(mol2Polarity, mol2Mass) || null;
     } else {
       return SIMULATOR_MOLECULES.find(m => m.formula === sim2Formula) || null;
     }
-  }, [mode, mol2Polarity, mol2Mass, mol2Shape, sim2Formula]);
+  }, [mode, mol2Polarity, mol2Mass, sim2Formula]);
 
   const handleDataUpdate = useCallback(() => {}, []);
 
   const tempPercent = ((temperature - (-100)) / 600) * 100;
 
-  // Temperature color gradient
+  // Temperature color gradient (cold → hot)
   const tempColor = (() => {
     const t = (temperature - (-100)) / 600;
-    if (t < 0.25) return '#4A90D9';
-    if (t < 0.5) return '#4CAF7D';
-    if (t < 0.75) return '#FF9800';
-    return '#E53935';
+    if (t < 0.25) return '#00addb';
+    if (t < 0.5)  return '#17b29e';
+    if (t < 0.75) return '#fdb714';
+    return '#e9177a';
   })();
 
   return (
     <div className="app">
+      {/* Tutorial overlay */}
+      <TutorialOverlay isOpen={tutorialOpen} onClose={() => setTutorialOpen(false)} />
+
+      {/* Help button — fixed top-right */}
+      <button
+        onClick={() => setTutorialOpen(true)}
+        title="Open tutorial"
+        style={{
+          position: 'fixed', top: 14, right: 14, zIndex: 9000,
+          width: 32, height: 32, borderRadius: '50%',
+          background: 'rgba(23,178,158,0.15)',
+          border: '1.5px solid rgba(23,178,158,0.5)',
+          color: '#17b29e', fontSize: 15, fontWeight: 700,
+          cursor: 'pointer', lineHeight: '30px', textAlign: 'center',
+          fontFamily: 'serif', padding: 0,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+        }}
+      >
+        ?
+      </button>
+
       {/* Main canvas area */}
       <div className="canvas-area">
         {/* Temperature slider */}
-        <div className="temp-slider-bar">
+        <div data-tutorial="temp-slider" className="temp-slider-bar">
           <div className="temp-slider-inner">
             <div className="temp-info">
               <span className="temp-icon">&#x1F321;</span>
@@ -105,7 +131,9 @@ export default function App() {
         />
 
         {/* Data panel */}
-        <DataPanel mol1={mol1} mol2={mol2} temperature={temperature} />
+        <div data-tutorial="data-panel">
+          <DataPanel mol1={mol1} mol2={mol2} temperature={temperature} />
+        </div>
       </div>
 
       {/* Right control panel */}
@@ -114,16 +142,12 @@ export default function App() {
         onModeChange={setMode}
         mol1Polarity={mol1Polarity}
         mol1Mass={mol1Mass}
-        mol1Shape={mol1Shape}
         mol2Polarity={mol2Polarity}
         mol2Mass={mol2Mass}
-        mol2Shape={mol2Shape}
         onMol1PolarityChange={setMol1Polarity}
         onMol1MassChange={setMol1Mass}
-        onMol1ShapeChange={setMol1Shape}
         onMol2PolarityChange={setMol2Polarity}
         onMol2MassChange={setMol2Mass}
-        onMol2ShapeChange={setMol2Shape}
         sim1Formula={sim1Formula}
         sim2Formula={sim2Formula}
         onSim1Change={setSim1Formula}

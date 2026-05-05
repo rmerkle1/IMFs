@@ -126,29 +126,39 @@ export function getMoleculeIMFs(mol) {
   return ['London dispersion'];
 }
 
-// Returns normalized 0-1 attraction strength between two molecules
+// Returns normalized 0-1 attraction strength between two molecules.
+// Boiling point is used as the primary driver when available: BP is the
+// temperature at which IMFs are overcome, so it directly captures the
+// combined effect of polarity, mass, and polarizability — meaning heavier,
+// more-polarizable molecules correctly score higher than lighter polar ones
+// when their BP is higher (e.g. CH₃SH bp=6°C > CH₂O bp=-19°C).
 export function getIMFStrength(mol1, mol2) {
   if (!mol1 || !mol2) return 0.1;
   const p1 = mol1.polarity;
   const p2 = mol2.polarity;
   const imfs = getIMFs(p1, p2);
 
-  let baseStrength = 0.15; // London dispersion baseline
+  // Ion-ion is always maximally strong
+  if (imfs.includes('ion-ion')) return 0.97;
 
-  // Mass contribution to London dispersion
+  // Use average BP when both molecules have one.
+  // Map [-220, 300] → [0.05, 0.95]; values outside this range are clamped.
+  if (mol1.bp != null && mol2.bp != null) {
+    const avgBP = (mol1.bp + mol2.bp) / 2;
+    const t = (avgBP + 220) / 520;
+    return Math.max(0.05, Math.min(0.95, t * 0.90 + 0.05));
+  }
+
+  // Fallback for ions without BP (Na⁺, Cl⁻, alkoxide ions, etc.)
   const avgMass = ((mol1.mass || 30) + (mol2.mass || 30)) / 2;
-  const massBonus = Math.min(0.2, avgMass / 300);
-  baseStrength += massBonus;
-
-  if (imfs.includes('ion-ion')) return Math.min(1.0, 0.95 + massBonus);
-  if (imfs.includes('ion-dipole')) return Math.min(1.0, 0.8 + massBonus);
-  if (imfs.includes('ion-induced dipole')) return Math.min(1.0, 0.6 + massBonus);
-  if (imfs.includes('hydrogen bonding')) return Math.min(1.0, 0.75 + massBonus);
-  if (imfs.includes('dipole-dipole')) return Math.min(1.0, 0.5 + massBonus);
-  if (imfs.includes('dipole-induced dipole')) return Math.min(1.0, 0.3 + massBonus);
-  if (imfs.includes('dipole-dipole (weak)')) return Math.min(1.0, 0.35 + massBonus);
-
-  return baseStrength;
+  const massBonus = Math.min(0.25, avgMass / 250);
+  if (imfs.includes('ion-dipole')) return Math.min(0.95, 0.80 + massBonus);
+  if (imfs.includes('ion-induced dipole')) return Math.min(0.95, 0.60 + massBonus);
+  if (imfs.includes('hydrogen bonding')) return Math.min(0.95, 0.65 + massBonus);
+  if (imfs.includes('dipole-dipole')) return Math.min(0.95, 0.45 + massBonus);
+  if (imfs.includes('dipole-dipole (weak)')) return Math.min(0.95, 0.30 + massBonus);
+  if (imfs.includes('dipole-induced dipole')) return Math.min(0.95, 0.25 + massBonus);
+  return Math.min(0.95, 0.10 + massBonus);
 }
 
 // Returns preferred orientation angle (radians) for mol2 relative to mol1
